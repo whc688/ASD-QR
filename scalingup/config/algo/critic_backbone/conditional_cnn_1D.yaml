@@ -1,0 +1,4 @@
+_target_: scalingup.algo.critic_backbone.ConditionalCNN1D
+input_dim: ???
+global_cond_dim: ???
+down_dims: ???

@@ -1,0 +1,46 @@
+defaults:
+  - image_base_film_efficient_direct
+  - _self_
+# robomimic obs encoder already does random crop
+transforms:
+  # uncomment to enable random perspective
+  # - _target_: torchvision.transforms.RandomPerspective
+  #   distortion_scale: 0.05
+  #   p: 1.0
+  #   fill: 210
+  - _target_: torchvision.transforms.Pad
+    # transforms.Pad((8, 12, 8, 12)),  # 在每边分别添加8像素和12像素的填充
+    padding:
+      - 8
+      - 12
+      - 8
+      - 12
+  - _target_: torchvision.transforms.RandomCrop
+    size:
+      - 160
+      - 240
+  - _target_: torchvision.transforms.RandomRotation
+    degrees:
+      - -2.0
+      - 2.0
+  - _target_: torchvision.transforms.ColorJitter
+    brightness: 0.2
+    contrast: 0.5
+    saturation: 0.2
+    hue: 0.2
+
+  - _target_: torchvision.transforms.Normalize
+    mean:
+    - 0.485
+    - 0.456
+    - 0.406
+    std:
+    - 0.229
+    - 0.224
+    - 0.225
+
+base_model:
+  _target_: scalingup.algo.state_encoder.film_efficientnet_encoder.EfficientNetB3
+  include_top: false
+  include_film: true
+per_view_output_dim: 512

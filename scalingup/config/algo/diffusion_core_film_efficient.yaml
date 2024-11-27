@@ -1,0 +1,84 @@
+defaults:
+  - noise_pred_net: cross_atten_diff_step_decoder
+  - noise_scheduler: default
+  - state_sequence_encoder: time_structure_film_efficient_direct_state_sequence_encoder
+  - optimizer: adamw
+  - lr_scheduler: diffusion_cosine
+  - ../ctrl_config@ctrl_config: four_hertz
+  - rollout_config: near_scalingup
+  - ../policy@scalingup_explorer: scalingup
+  - _self_
+
+_target_: scalingup.algo.diffusion.PartialDnoisingDiffusionScalingUpAlgo
+_recursive_: true
+_convert_: dict
+action_dim: ???
+float32_matmul_precision: medium
+
+# EMA
+ema_power: 0.75
+ema_update_after_step: 0
+
+# for classifier free guidance
+should_condition_on_task_metric: ???
+task_metric_dim: 32
+policy_task_metric_guidance: ???
+task_metric_corrupt_prob: ???
+policy_suppress_token: ??? # unconditional
+policy_towards_token: 1.0
+
+# diffusion process
+noise_scheduler:
+  num_train_timesteps: 50
+num_inference_steps: 5
+num_timesteps_per_batch: 1
+# train on multiple diffusion timesteps per batch
+# this design is mainly to offset the high costs
+# of visual feature extraction
+
+# obs encoder
+state_sequence_encoder:
+  rollout_config: ${..rollout_config}
+  should_condition_on_vision: true
+  vision_encoder:
+    vision_obs_horizon: ${...rollout_config.vision_obs_horizon}
+
+replay_buffer:
+  proprioception_keys: ${..state_sequence_encoder.proprioception_keys}
+  obs_cameras: ${obs_cameras}
+  # if not conditioning on success, then should just filter out imperfect trajectories
+  filter_negatives: ${eval:"not ${..should_condition_on_task_metric}"}
+  # eventually don't learn from ground truth task success, only from inferred
+  filter_manually_designed_trajectories: false
+  rollout_config: ${..rollout_config}
+
+noise_pred_net:
+  action_dim: ${..action_dim}
+  decoder_horizon: ${eval:"${..rollout_config.prediction_horizon}"}
+  encoder_horizon: ${eval:"${..rollout_config.vision_obs_horizon} * ${..state_sequence_encoder.vision_encoder.num_tokens} * 3"}
+  #cond_dim: ${eval:"${..state_sequence_encoder.task_desc_proj.out_features} + ${..state_sequence_encoder.proprio_dim} + ${..state_sequence_encoder.vision_encoder.output_dim}"}
+  cond_dim: 512
+  n_encoder_layer: 6
+  n_decoder_layer: 6
+  n_head: 8
+  n_emb: 512
+  p_drop_emb: 0.1
+  p_drop_attn: 0.1
+  diff_step_cond: add
+  pos_emb_type: learned
+  diffusion_step_embed_dim: 512
+
+# debugging stats config
+num_validation_batches: 32
+num_validation_seeds: 5
+validation_accuracy_thresholds:
+ - 0.0001
+ - 0.00001
+ - 0.000001
+
+supported_policy_tasks: null
+action_groups:
+  all: ${eval:"slice(None)"}
+  ee_pos: ${eval:"slice(0,3)"}
+  ee_orn: ${eval:"slice(3,-1)"}
+  ee_grip: ${eval:"slice(-1,None)"}

@@ -1,0 +1,18 @@
+defaults:
+  - single_env
+  - _self_
+sampler_config:
+  max_time: 120 # in seconds
+env:
+  _target_: scalingup.environment.mujoco.drawer.DrawerMujocoEnv
+  pose_randomization: false
+  position_randomization: true
+task_sampler:
+  _target_: scalingup.utils.core.TaskSampler
+  tasks:
+    # crayon box
+    - _target_: scalingup.utils.tasks.PutObjInContainer
+      obj_link_path: crayon box/|crayon box/crayon box
+      container_link_path: drawer/|drawer/drawer|drawer/middle_drawer
+      require_close: True
+      desc_template: move the crayon box into the middle drawer

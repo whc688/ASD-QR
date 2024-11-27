@@ -1,0 +1,7 @@
+defaults:
+  - replay_buffer: RL_image
+  - override state_sequence_encoder/vision_encoder@actor_state_sequence_encoder.vision_encoder: image_robomimic # {image_robomimic, image_resnet}
+  - override state_sequence_encoder/vision_encoder@critic_state_sequence_encoder.vision_encoder: image_robomimic # {image_robomimic, image_resnet}
+  - _self_
+replay_buffer:
+  obs_dim: ${..critic_state_sequence_encoder.vision_encoder.obs_dim}

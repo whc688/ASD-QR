@@ -1,0 +1,4 @@
+_target_: scalingup.algo.single_action_actor_backbone.LinearNet
+action_dim: ???
+global_cond_dim: ???
+dropout_prob: ???

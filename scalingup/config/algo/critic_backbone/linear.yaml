@@ -1,0 +1,4 @@
+_target_: scalingup.algo.single_action_critic_backbone.CriticLinearNet
+action_dim: ???
+global_cond_dim: ???
+dropout_prob: ???

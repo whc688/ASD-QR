@@ -1,0 +1,3 @@
+_target_: scalingup.algo.single_action_critic_backbone.CriticValueFunctionLinearNet
+global_cond_dim: ???
+dropout_prob: ???

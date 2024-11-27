@@ -1,0 +1,82 @@
+defaults:
+  - state_sequence_encoder@actor_state_sequence_encoder: default
+  - actor_backbone: linear
+  - state_sequence_encoder@critic_Q1_state_sequence_encoder: default
+  - state_sequence_encoder@critic_Q2_state_sequence_encoder: default
+  - critic_backbone@critic_Q1_backbone: linear
+  - critic_backbone@critic_Q2_backbone: linear
+  - state_sequence_encoder@critic_V_state_sequence_encoder: default
+  - critic_backbone@critic_V_backbone: value_linear
+  - optimizer@critic_Q_optimizer: adamw
+  - optimizer@critic_V_optimizer: adamw
+  - optimizer@actor_optimizer: adamw
+  - lr_scheduler@critic_Q_lr_scheduler: cosine
+  - lr_scheduler@critic_V_lr_scheduler: cosine
+  - lr_scheduler@actor_lr_scheduler: cosine
+  - ../ctrl_config@ctrl_config: four_hertz
+  - rollout_config: default
+  - _self_
+
+_target_: scalingup.algo.IQL_SAC_algo.IqlSacTrainingAlgo
+_recursive_: true
+_convert_: dict
+action_dim: ???
+float32_matmul_precision: medium
+
+# obs encoder
+actor_state_sequence_encoder:
+  rollout_config: ${..rollout_config}
+  should_condition_on_vision: true
+  vision_encoder:
+    vision_obs_horizon: ${...rollout_config.vision_obs_horizon}
+critic_Q1_state_sequence_encoder:
+  rollout_config: ${..rollout_config}
+  should_condition_on_vision: true
+  vision_encoder:
+    vision_obs_horizon: ${...rollout_config.vision_obs_horizon}
+critic_Q2_state_sequence_encoder:
+  rollout_config: ${..rollout_config}
+  should_condition_on_vision: true
+  vision_encoder:
+    vision_obs_horizon: ${...rollout_config.vision_obs_horizon}
+critic_V_state_sequence_encoder:
+  rollout_config: ${..rollout_config}
+  should_condition_on_vision: true
+  vision_encoder:
+      vision_obs_horizon: ${...rollout_config.vision_obs_horizon}
+
+replay_buffer:
+  proprioception_keys: ${..critic_Q1_state_sequence_encoder.proprioception_keys}
+  obs_cameras: ${obs_cameras}
+  # if not conditioning on success, then should just filter out imperfect trajectories
+  filter_negatives: ${eval:"not ${..should_condition_on_task_metric}"}
+  # eventually don't learn from ground truth task success, only from inferred
+  filter_manually_designed_trajectories: false
+  rollout_config: ${..rollout_config}
+
+critic_Q1_backbone:
+  action_dim: ${..action_dim}
+  global_cond_dim: ${eval:"${..critic_Q1_state_sequence_encoder.task_desc_proj.out_features}*int(${..critic_Q1_state_sequence_encoder.should_condition_on_text}) + ${..critic_Q1_state_sequence_encoder.proprio_dim} * ${..rollout_config.proprio_obs_horizon} + ${..critic_Q1_state_sequence_encoder.vision_encoder.output_dim} * ${..rollout_config.vision_obs_horizon}*int(${..critic_Q1_state_sequence_encoder.should_condition_on_vision})"}
+  dropout_prob: 0.2
+critic_Q2_backbone:
+  action_dim: ${..action_dim}
+  global_cond_dim: ${eval:"${..critic_Q1_state_sequence_encoder.task_desc_proj.out_features}*int(${..critic_Q1_state_sequence_encoder.should_condition_on_text}) + ${..critic_Q1_state_sequence_encoder.proprio_dim} * ${..rollout_config.proprio_obs_horizon} + ${..critic_Q1_state_sequence_encoder.vision_encoder.output_dim} * ${..rollout_config.vision_obs_horizon}*int(${..critic_Q1_state_sequence_encoder.should_condition_on_vision})"}
+  dropout_prob: 0.2
+critic_V_backbone:
+  global_cond_dim: ${eval:"${..critic_Q1_state_sequence_encoder.task_desc_proj.out_features}*int(${..critic_Q1_state_sequence_encoder.should_condition_on_text}) + ${..critic_Q1_state_sequence_encoder.proprio_dim} * ${..rollout_config.proprio_obs_horizon} + ${..critic_Q1_state_sequence_encoder.vision_encoder.output_dim} * ${..rollout_config.vision_obs_horizon}*int(${..critic_Q1_state_sequence_encoder.should_condition_on_vision})"}
+  dropout_prob: 0.2
+actor_backbone:
+  action_dim: ${..action_dim}
+  global_cond_dim: ${eval:"${..actor_state_sequence_encoder.task_desc_proj.out_features}*int(${..actor_state_sequence_encoder.should_condition_on_text}) + ${..actor_state_sequence_encoder.proprio_dim} * ${..rollout_config.proprio_obs_horizon} + ${..actor_state_sequence_encoder.vision_encoder.output_dim} * ${..rollout_config.vision_obs_horizon}*int(${..actor_state_sequence_encoder.should_condition_on_vision})"}
+  dropout_prob: 0.2
+
+# debugging stats config
+num_validation_batches: 32
+
+# critic training
+log_grad_frequence: 50
+gamma: 0.98
+alpha: 0.005  # target 进行指数移动平均的参数
+tau: 0.9  # IQL Expectile Regression 的参数
+beta: 3.0  # IQL AWR 的参数
+
