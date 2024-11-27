@@ -18,11 +18,10 @@ python examples/render_table_top.py
 ```
 This should show you RGB, depth, and segmentation masks for the front workspace and wrist mounted camera view.
 
-![](assets/render_table_top_front.png)
-![](assets/render_table_top_wrist.png)
+![](docs/assets/render_table_top_front.png)
+![](docs/assets/render_table_top_wrist.png)
 
 > 📘 Info
 > 
 > If the rendered image comes up weird, maybe your setup does not support MuJoCo's default renderer (GLFW).
 > You can try one of their other supported renderers (`osmesa`,`egl`) by setting the `MUJOCO_GL` environment variable (e.g., `MUJOCO_GL=osmesa`).
-```
